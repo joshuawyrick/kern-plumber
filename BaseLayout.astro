@@ -1,0 +1,14 @@
+---
+import Icon from './Icon.astro';
+import { PHONE_SMS, PHONE_TEL } from '@/lib/site';
+import { pageForRoute, needsLeadForm } from '@/lib/content';
+const { locale = 'en', route = '/' } = Astro.props;
+const es = locale === 'es';
+const page = pageForRoute(route);
+const quoteHref = page && needsLeadForm(page) ? '#request-service' : (es ? '/es/contacto/' : '/contact/');
+---
+<nav class="mobile-sticky" aria-label={es ? 'Acciones rápidas' : 'Quick actions'}>
+  <a class="sticky-primary" href={PHONE_TEL} data-phone-link><Icon name="phone" size={19} />{es ? 'Llamar' : 'Call'}</a>
+  <a href={PHONE_SMS} data-sms-link><Icon name="message" size={19} />{es ? 'Texto' : 'Text'}</a>
+  <a href={quoteHref}><Icon name="arrow-right" size={19} />{es ? 'Cotizar' : 'Quote'}</a>
+</nav>

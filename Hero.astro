@@ -1,0 +1,10 @@
+---
+import PhoneLink from './PhoneLink.astro';
+const { locale = 'en' } = Astro.props;
+---
+<div class="utility-bar">
+  <div class="container utility-inner">
+    <span>{locale === 'es' ? 'Plomería de Emergencia 24/7 —' : '24/7 Emergency Plumbing —'}</span>
+    <PhoneLink label={locale === 'es' ? 'Llame al (661) 555-0142' : 'Call (661) 555-0142'} />
+  </div>
+</div>

@@ -1,0 +1,66 @@
+---
+import Icon from './Icon.astro';
+import PhoneLink from './PhoneLink.astro';
+import { cityLinksFor, serviceLinksFor, twinForRoute } from '@/lib/site';
+const { route, locale = 'en' } = Astro.props;
+const es = locale === 'es';
+const services = serviceLinksFor(route);
+const cities = cityLinksFor(route);
+const twin = twinForRoute(route);
+---
+<header class="site-header">
+  <div class="container header-inner">
+    <a href={es ? '/es/' : '/'} class="brand" aria-label={es ? 'Kern Plumbing Pros página principal' : 'Kern Plumbing Pros home'}>
+      <span class="brand-mark" aria-hidden="true"><Icon name="droplets" size={24} /></span>
+      <span class="brand-copy"><strong>Kern Plumbing</strong><span>Pros</span></span>
+    </a>
+
+    <nav class="desktop-nav" aria-label={es ? 'Navegación principal' : 'Primary navigation'}>
+      <details class="nav-menu">
+        <summary>{es ? 'Servicios' : 'Services'} <Icon name="chevron-down" size={16} /></summary>
+        <div class="nav-popover">
+          {services.map((item) => <a href={item.href}>{item.label}</a>)}
+        </div>
+      </details>
+      <details class="nav-menu">
+        <summary>{es ? 'Áreas de Servicio' : 'Service Areas'} <Icon name="chevron-down" size={16} /></summary>
+        <div class="nav-popover">
+          {cities.map((item) => <a href={item.href}>{item.label}</a>)}
+        </div>
+      </details>
+      <a href={es ? '/es/nosotros/' : '/about/'}>{es ? 'Nosotros' : 'About'}</a>
+      <a href={es ? '/es/resenas/' : '/reviews/'}>{es ? 'Reseñas' : 'Reviews'}</a>
+      <a href={es ? '/es/contacto/' : '/contact/'}>{es ? 'Contacto' : 'Contact'}</a>
+    </nav>
+
+    <div class="header-actions">
+      {twin && <a class="language-chip" href={twin} lang={es ? 'en' : 'es'}>{es ? 'EN' : 'ES'}</a>}
+      <PhoneLink class="button button-primary header-call" label={es ? 'Llame Ahora' : 'Call Now'} />
+      <button class="mobile-menu-button" type="button" aria-expanded="false" aria-controls="mobile-menu" aria-label={es ? 'Abrir menú' : 'Open menu'} data-menu-toggle>
+        <Icon name="menu" />
+      </button>
+    </div>
+  </div>
+
+  <div id="mobile-menu" class="mobile-menu" hidden>
+    <div class="container mobile-menu-inner">
+      <a href={es ? '/es/servicios/' : '/services/'}>{es ? 'Todos los Servicios' : 'All Services'}</a>
+      {services.map((item) => <a href={item.href}>{item.label}</a>)}
+      <a href={es ? '/es/areas-de-servicio/' : '/locations/'}>{es ? 'Áreas de Servicio' : 'Service Areas'}</a>
+      <a href={es ? '/es/nosotros/' : '/about/'}>{es ? 'Nosotros' : 'About'}</a>
+      <a href={es ? '/es/resenas/' : '/reviews/'}>{es ? 'Reseñas' : 'Reviews'}</a>
+      <a href={es ? '/es/contacto/' : '/contact/'}>{es ? 'Contacto' : 'Contact'}</a>
+    </div>
+  </div>
+</header>
+<script is:inline>
+  const toggle = document.querySelector('[data-menu-toggle]');
+  const menu = document.getElementById('mobile-menu');
+  if (toggle && menu) {
+    toggle.addEventListener('click', () => {
+      const open = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!open));
+      menu.hidden = open;
+    });
+  }
+</script>

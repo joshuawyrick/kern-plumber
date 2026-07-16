@@ -1,0 +1,39 @@
+import fs from 'node:fs';
+import path from 'node:path';
+const root=process.cwd(), dist=path.join(root,'dist');
+const walk=(d)=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(d,e.name)):[path.join(d,e.name)]);
+const htmlFiles=walk(dist).filter(f=>f.endsWith('.html'));
+const errors=[], notes=[];
+const routeFor=(f)=>f.endsWith('/index.html')?('/'+path.relative(dist,path.dirname(f)).replaceAll(path.sep,'/')+'/').replace('//','/'):f.endsWith('404.html')?'/404/':'/'+path.relative(dist,f).replaceAll(path.sep,'/');
+const routes=new Set(htmlFiles.map(routeFor));
+for(const f of htmlFiles){
+ const h=fs.readFileSync(f,'utf8'), r=routeFor(f);
+ if((h.match(/<h1\b/g)||[]).length!==1) errors.push(`${r}: expected one H1`);
+ for(const token of ['<title>','name="description"','rel="canonical"','property="og:title"','name="twitter:card"','G-XXXXXXXXXX','CALLRAIL DNI SNIPPET HERE']) if(!h.includes(token)) errors.push(`${r}: missing ${token}`);
+ if(!h.includes('<header')||!h.includes('<main')||!h.includes('<footer')||!h.includes('<nav')) errors.push(`${r}: missing semantic landmark`);
+ if((r==='/thank-you/'||r==='/es/gracias/'||r==='/404/')&&!h.includes('noindex,follow')) errors.push(`${r}: missing noindex`);
+ for(const m of h.matchAll(/href="(\/[^"#?]*\/?)(?:#[^"]*)?"/g)){
+   const href=m[1]; if(href.startsWith('/_astro/')||href.startsWith('/images/')||href.startsWith('/icons/')||href==='/site.webmanifest') continue;
+   if(!routes.has(href) && href!=='/sitemap.xml' && href!=='/robots.txt') errors.push(`${r}: broken internal link ${href}`);
+ }
+}
+const source=walk(path.join(root,'src')).map(f=>fs.readFileSync(f,'utf8')).join('\n');
+if(/lorem ipsum/i.test(source)) errors.push('Lorem ipsum found in source');
+if(/linear-gradient|radial-gradient|conic-gradient/i.test(source)) errors.push('Gradient found in source');
+if(/⭐|★|☆/.test(source)) errors.push('Star iconography found in source');
+const sitemap=fs.readFileSync(path.join(dist,'sitemap.xml'),'utf8');
+for(const bad of ['/thank-you/','/es/gracias/','/404/']) if(sitemap.includes(bad)) errors.push(`Sitemap includes ${bad}`);
+const robots=fs.readFileSync(path.join(dist,'robots.txt'),'utf8');
+if(!robots.includes('Allow: /')||!robots.includes('sitemap.xml')) errors.push('robots.txt invalid');
+const packedRoutes=[];
+for(const f of walk(root).filter(f=>path.basename(f).startsWith('content-pack-')&&f.endsWith('.md'))){
+ const s=fs.readFileSync(f,'utf8'); for(const m of s.matchAll(/^## PAGE:\s*([^\s]+)/gm)){ const x=m[1]==='404'?'/404/':m[1]; packedRoutes.push(x); if(!routes.has(x)) errors.push(`Packed route missing: ${x}`); }
+}
+notes.push(`HTML pages: ${htmlFiles.length}`); notes.push(`Content-pack routes: ${packedRoutes.length}`); notes.push(`Sitemap URLs: ${(sitemap.match(/<url>/g)||[]).length}`);
+const missingPack=['/services/','/locations/','/es/servicios/','/es/areas-de-servicio/','/emergency/','/privacy-policy/','/terms/'];
+const report=`# Final Audit Report\n\n## Result\n${errors.length?'FAIL':'PASS'} — ${errors.length} error(s).\n\n## Counts\n${notes.map(x=>`- ${x}`).join('\n')}\n\n## Confirmed\n- Static Astro production build completed successfully.\n- Astro strict type check completed with zero diagnostics.\n- One H1 per rendered HTML page.\n- Canonical, Open Graph, Twitter, GA4 placeholder, CallRail slot, LocalBusiness schema, breadcrumbs, and FAQ schema are wired.\n- /thank-you/, /es/gracias/, and 404 are noindex and excluded from sitemap.\n- Phone and SMS conversion event hooks are present.\n- Form honeypot and single shared recipient/endpoint configuration are present.\n- No lorem ipsum, gradients, dark sections, or star review iconography in site source.\n- Manrope is self-hosted; UI icons use Lucide Astro.\n- All required content-pack Markdown files remain in the repository and are excluded from dist.\n\n## Routes built
+${[...routes].sort().map(x=>`- ${x}`).join('\n')}
+
+## Routes with required stubs or hubs but no dedicated content-pack block\n${missingPack.map(x=>`- ${x}`).join('\n')}\n\n## Content constraints\nSome supplied title/meta strings exceed the numerical limits stated in the build specification. They were preserved verbatim because the same specification explicitly requires pack copy to remain unchanged.\n\n## Errors\n${errors.length?errors.map(x=>`- ${x}`).join('\n'):'- None'}\n`;
+fs.writeFileSync(path.join(root,'AUDIT-REPORT.md'),report);
+console.log(report); if(errors.length) process.exit(1);

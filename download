@@ -1,0 +1,207 @@
+export const SITE_NAME = 'Kern Plumbing Pros';
+export const SITE_URL = 'https://kernplumbingpros.com';
+export const PHONE_DISPLAY = '(661) 555-0142';
+export const PHONE_NUMBER = '+16615550142';
+export const PHONE_TEL = `tel:${PHONE_NUMBER}`;
+export const PHONE_SMS = `sms:${PHONE_NUMBER}`;
+export const PUBLIC_EMAIL = 'contact@kernplumbingpros.com';
+export const LEAD_EMAIL = 'leads@kernplumbingpros.com';
+// FORM ENDPOINT SLOT — replace this single value if the form provider changes.
+export const FORM_ENDPOINT = `https://formsubmit.co/${LEAD_EMAIL}`;
+export const GA4_ID = 'G-XXXXXXXXXX';
+
+export const servicesEn = [
+  ['drain-cleaning', 'Drain Cleaning', 'droplets'],
+  ['water-heater-repair', 'Water Heater Repair', 'flame'],
+  ['emergency-plumbing', 'Emergency Plumbing', 'siren'],
+  ['leak-detection', 'Leak Detection', 'search'],
+  ['sewer-line-repair', 'Sewer Line Repair', 'route'],
+  ['repiping', 'Repiping', 'workflow'],
+  ['toilet-faucet-repair', 'Toilet & Faucet Repair', 'wrench'],
+  ['gas-line-services', 'Gas Line Services', 'fuel']
+] as const;
+
+export const servicesEs = [
+  ['destapado-de-drenajes', 'Destapado de Drenajes', 'droplets'],
+  ['reparacion-de-calentadores', 'Reparación de Calentadores', 'flame'],
+  ['plomeria-de-emergencia', 'Plomería de Emergencia', 'siren'],
+  ['deteccion-de-fugas', 'Detección de Fugas', 'search'],
+  ['reparacion-de-alcantarillado', 'Reparación de Alcantarillado', 'route'],
+  ['reemplazo-de-tuberias', 'Reemplazo de Tuberías', 'workflow'],
+  ['reparacion-de-inodoros-y-llaves', 'Reparación de Inodoros y Llaves', 'wrench'],
+  ['lineas-de-gas', 'Líneas de Gas', 'fuel']
+] as const;
+
+export const cities = [
+  ['bakersfield-ca', 'Bakersfield'],
+  ['delano-ca', 'Delano'],
+  ['arvin-ca', 'Arvin'],
+  ['taft-ca', 'Taft'],
+  ['tehachapi-ca', 'Tehachapi']
+] as const;
+
+export const serviceSlugMap = Object.fromEntries(servicesEn.map((item, index) => [item[0], servicesEs[index][0]]));
+export const serviceSlugMapReverse = Object.fromEntries(servicesEs.map((item, index) => [item[0], servicesEn[index][0]]));
+
+export function normalizeRoute(route: string): string {
+  if (!route || route === '/') return '/';
+  return `/${route.replace(/^\/+|\/+$/g, '')}/`;
+}
+
+export function absoluteUrl(route: string): string {
+  return new URL(normalizeRoute(route), SITE_URL).toString();
+}
+
+export function localeForRoute(route: string): 'en' | 'es' {
+  return normalizeRoute(route).startsWith('/es/') ? 'es' : 'en';
+}
+
+export function twinForRoute(route: string): string | undefined {
+  const r = normalizeRoute(route);
+  const direct: Record<string, string> = {
+    '/': '/es/', '/es/': '/',
+    '/about/': '/es/nosotros/', '/es/nosotros/': '/about/',
+    '/contact/': '/es/contacto/', '/es/contacto/': '/contact/',
+    '/reviews/': '/es/resenas/', '/es/resenas/': '/reviews/',
+    '/thank-you/': '/es/gracias/', '/es/gracias/': '/thank-you/',
+    '/services/': '/es/servicios/', '/es/servicios/': '/services/',
+    '/locations/': '/es/areas-de-servicio/', '/es/areas-de-servicio/': '/locations/'
+  };
+  if (direct[r]) return direct[r];
+
+  let match = r.match(/^\/services\/([^/]+)\/$/);
+  if (match && serviceSlugMap[match[1]]) return `/es/servicios/${serviceSlugMap[match[1]]}/`;
+  match = r.match(/^\/es\/servicios\/([^/]+)\/$/);
+  if (match && serviceSlugMapReverse[match[1]]) return `/services/${serviceSlugMapReverse[match[1]]}/`;
+
+  match = r.match(/^\/locations\/([^/]+)\/$/);
+  if (match) return `/es/areas-de-servicio/${match[1]}/`;
+  match = r.match(/^\/es\/areas-de-servicio\/([^/]+)\/$/);
+  if (match) return `/locations/${match[1]}/`;
+
+  match = r.match(/^\/locations\/(delano-ca|arvin-ca)\/([^/]+)\/$/);
+  if (match && serviceSlugMap[match[2]]) return `/es/areas-de-servicio/${match[1]}/${serviceSlugMap[match[2]]}/`;
+  match = r.match(/^\/es\/areas-de-servicio\/(delano-ca|arvin-ca)\/([^/]+)\/$/);
+  if (match && serviceSlugMapReverse[match[2]]) return `/locations/${match[1]}/${serviceSlugMapReverse[match[2]]}/`;
+  return undefined;
+}
+
+export function routeLabel(route: string): string {
+  const r = normalizeRoute(route);
+  if (r === '/') return 'Home';
+  if (r === '/es/') return 'Inicio';
+  const part = r.split('/').filter(Boolean).at(-1) || '';
+  const service = servicesEn.find(([slug]) => slug === part)?.[1] || servicesEs.find(([slug]) => slug === part)?.[1];
+  const city = cities.find(([slug]) => slug === part)?.[1];
+  if (service) return service;
+  if (city) return city;
+  const labels: Record<string, string> = {
+    services: 'Services', locations: 'Service Areas', about: 'About', contact: 'Contact', reviews: 'Reviews', emergency: 'Emergency',
+    'privacy-policy': 'Privacy Policy', terms: 'Terms', nosotros: 'Nosotros', contacto: 'Contacto', resenas: 'Reseñas',
+    servicios: 'Servicios', 'areas-de-servicio': 'Áreas de Servicio', gracias: 'Gracias', 'thank-you': 'Thank You'
+  };
+  return labels[part] || part.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export function breadcrumbsForRoute(route: string): Array<{ label: string; href: string }> {
+  const r = normalizeRoute(route);
+  if (r === '/' || r === '/es/') return [];
+  const es = r.startsWith('/es/');
+  const segments = r.split('/').filter(Boolean);
+  const crumbs = [{ label: es ? 'Inicio' : 'Home', href: es ? '/es/' : '/' }];
+  let current = '';
+  for (const segment of segments) {
+    current += `/${segment}`;
+    if (segment === 'es') continue;
+    crumbs.push({ label: routeLabel(`${current}/`), href: `${current}/` });
+  }
+  return crumbs;
+}
+
+export function cityLinksFor(route: string): Array<{ href: string; label: string }> {
+  const es = localeForRoute(route) === 'es';
+  return cities.map(([slug, name]) => ({
+    href: es ? `/es/areas-de-servicio/${slug}/` : `/locations/${slug}/`,
+    label: es ? `Plomero en ${name}, CA` : `Plumber in ${name}, CA`
+  }));
+}
+
+export function serviceLinksFor(route: string): Array<{ href: string; label: string; icon: string }> {
+  const es = localeForRoute(route) === 'es';
+  return (es ? servicesEs : servicesEn).map(([slug, label, icon]) => ({
+    href: es ? `/es/servicios/${slug}/` : `/services/${slug}/`, label, icon
+  }));
+}
+
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+export function richText(value: string): string {
+  let text = escapeHtml(value);
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/\(661\) 555-0142/g, `<a href="${PHONE_TEL}" data-phone-link>${PHONE_DISPLAY}</a>`);
+  text = text.replace(/contact@kernplumbingpros\.com/g, `<a href="mailto:${PUBLIC_EMAIL}">${PUBLIC_EMAIL}</a>`);
+  return text;
+}
+
+export function linkForBracketLabel(label: string, route: string): string | undefined {
+  const normalized = label.toLowerCase();
+  const city = cities.find(([, name]) => normalized.includes(name.toLowerCase()));
+  const enTerms: Array<[string, number]> = [
+    ['drain cleaning', 0], ['water heater repair', 1], ['emergency plumber', 2], ['emergency plumbing', 2],
+    ['leak detection', 3], ['sewer line repair', 4], ['repiping', 5],
+    ['toilet and faucet repair', 6], ['toilet & faucet repair', 6], ['gas line services', 7]
+  ];
+  const esTerms: Array<[string, number]> = [
+    ['destapado de drenajes', 0], ['reparación de calentadores', 1], ['calentadores de agua', 1],
+    ['plomería de emergencia', 2], ['detección de fugas', 3], ['reparación de alcantarillado', 4],
+    ['línea de drenaje principal', 4], ['reemplazo de tuberías', 5], ['cambio de tuberías', 5],
+    ['reparación de inodoros y llaves', 6], ['líneas de gas', 7]
+  ];
+  const serviceIndex = enTerms.find(([term]) => normalized.includes(term))?.[1] ?? -1;
+  const esIndex = esTerms.find(([term]) => normalized.includes(term))?.[1] ?? -1;
+  const es = localeForRoute(route) === 'es';
+
+  if (city && serviceIndex >= 0) {
+    const [citySlug] = city;
+    const [serviceSlug] = servicesEn[serviceIndex];
+    return citySlug === 'bakersfield-ca' ? `/services/${serviceSlug}/` : `/locations/${citySlug}/${serviceSlug}/`;
+  }
+  if (city && esIndex >= 0) {
+    const [citySlug] = city;
+    const [serviceSlug] = servicesEs[esIndex];
+    return citySlug === 'delano-ca' || citySlug === 'arvin-ca' ? `/es/areas-de-servicio/${citySlug}/${serviceSlug}/` : `/es/areas-de-servicio/${citySlug}/`;
+  }
+  if (serviceIndex >= 0) {
+    const [serviceSlug] = servicesEn[serviceIndex];
+    const cityMatch = normalizeRoute(route).match(/^\/locations\/([^/]+)\/?$/);
+    if (cityMatch && cityMatch[1] !== 'bakersfield-ca') return `/locations/${cityMatch[1]}/${serviceSlug}/`;
+    return `/services/${serviceSlug}/`;
+  }
+  if (esIndex >= 0) {
+    const [serviceSlug] = servicesEs[esIndex];
+    const cityMatch = normalizeRoute(route).match(/^\/es\/areas-de-servicio\/([^/]+)\/?$/);
+    if (cityMatch && (cityMatch[1] === 'delano-ca' || cityMatch[1] === 'arvin-ca')) return `/es/areas-de-servicio/${cityMatch[1]}/${serviceSlug}/`;
+    return `/es/servicios/${serviceSlug}/`;
+  }
+  if (city) return es ? `/es/areas-de-servicio/${city[0]}/` : `/locations/${city[0]}/`;
+  return undefined;
+}
+
+export function richTextForRoute(value: string, route: string): string {
+  let text = escapeHtml(value);
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/\[([^\]]+)\]/g, (_match, label) => {
+    const href = linkForBracketLabel(label, route);
+    return href ? `<a href="${href}">${label}</a>` : label;
+  });
+  text = text.replace(/\(661\) 555-0142/g, `<a href="${PHONE_TEL}" data-phone-link>${PHONE_DISPLAY}</a>`);
+  text = text.replace(/contact@kernplumbingpros\.com/g, `<a href="mailto:${PUBLIC_EMAIL}">${PUBLIC_EMAIL}</a>`);
+  return text;
+}

@@ -1,0 +1,68 @@
+---
+import { FORM_ENDPOINT, SITE_URL } from '@/lib/site';
+const { locale = 'en', heading, intro } = Astro.props;
+const es = locale === 'es';
+const labels = es ? {
+  name: 'Nombre', phone: 'Teléfono', city: 'Ciudad', help: '¿En qué necesita ayuda?', submit: 'Solicitar Servicio', other: 'Otra', placeholder: 'Describa el problema de plomería'
+} : {
+  name: 'Name', phone: 'Phone', city: 'City', help: 'What do you need help with?', submit: 'Request Service', other: 'Other', placeholder: 'Describe the plumbing problem'
+};
+const next = new URL(es ? '/es/gracias/' : '/thank-you/', SITE_URL).toString();
+---
+<section class="section lead-form-section" id="request-service">
+  <div class="container form-layout">
+    <div class="form-intro">
+      <span class="eyebrow">{es ? 'SOLICITUD DE SERVICIO' : 'SERVICE REQUEST'}</span>
+      <h2>{heading || (es ? 'Solicite Servicio de Plomería' : 'Request Plumbing Service')}</h2>
+      {intro && <p set:html={intro} />}
+      <div class="form-assurance">
+        <span>{es ? 'Cuatro campos' : 'Four fields'}</span>
+        <span>{es ? 'Respuesta rápida' : 'Fast response'}</span>
+        <span>{es ? 'Emergencias 24/7' : '24/7 emergencies'}</span>
+      </div>
+    </div>
+    <!-- FORM ENDPOINT SLOT: update FORM_ENDPOINT in src/lib/site.ts -->
+    <form class="lead-form" action={FORM_ENDPOINT} method="POST" data-lead-form>
+      <input type="hidden" name="_subject" value={es ? 'Nueva solicitud de plomería' : 'New plumbing service request'} />
+      <input type="hidden" name="_next" value={next} />
+      <input type="hidden" name="_template" value="table" />
+      <div class="honeypot" aria-hidden="true">
+        <label for="website">Website</label>
+        <input id="website" name="website" tabindex="-1" autocomplete="off" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for={`name-${locale}`}>{labels.name}</label>
+          <input id={`name-${locale}`} name="name" autocomplete="name" required />
+        </div>
+        <div class="field">
+          <label for={`phone-${locale}`}>{labels.phone}</label>
+          <input id={`phone-${locale}`} name="phone" type="tel" autocomplete="tel" inputmode="tel" pattern="[0-9()+\- .]{7,20}" required />
+        </div>
+      </div>
+      <div class="field">
+        <label for={`city-${locale}`}>{labels.city}</label>
+        <select id={`city-${locale}`} name="city" required>
+          <option value="">{es ? 'Seleccione una ciudad' : 'Select a city'}</option>
+          <option>Bakersfield</option><option>Delano</option><option>Arvin</option><option>Taft</option><option>Tehachapi</option><option>{labels.other}</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for={`help-${locale}`}>{labels.help}</label>
+        <textarea id={`help-${locale}`} name="message" rows="5" placeholder={labels.placeholder} required></textarea>
+      </div>
+      <button class="button button-primary form-submit" type="submit">{labels.submit}</button>
+    </form>
+  </div>
+</section>
+<script is:inline>
+  document.querySelectorAll('[data-lead-form]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      const trap = form.querySelector('input[name="website"]');
+      if (trap && trap.value) {
+        event.preventDefault();
+        form.reset();
+      }
+    });
+  });
+</script>

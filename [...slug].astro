@@ -1,0 +1,36 @@
+---
+import Hero from './Hero.astro';
+import SectionRenderer from './SectionRenderer.astro';
+import LeadForm from './LeadForm.astro';
+import Icon from './Icon.astro';
+import { needsLeadForm, relatedLinks, type PageData } from '@/lib/content';
+import { richTextForRoute } from '@/lib/site';
+interface Props { page: PageData; locale?: 'en' | 'es'; }
+const { page, locale = 'en' } = Astro.props;
+const es = locale === 'es';
+const formSection = page.sections.find((section) => section.name.includes('lead-form'));
+const formHeading = formSection?.lines.find((line) => line.startsWith('H2:'))?.slice(3).trim();
+const formIntro = formSection?.lines.filter((line) => !line.startsWith('H2:')).join(' ');
+const links = relatedLinks(page);
+const isThankYou = page.route === '/thank-you/' || page.route === '/es/gracias/';
+---
+<Hero page={page} locale={locale} />
+{page.sections.filter((section) => section.name !== 'hero' && !section.name.includes('lead-form') && section.name !== 'anchors').map((section) => (
+  <SectionRenderer section={section} page={page} locale={locale} />
+))}
+
+{links.length > 0 && !isThankYou && (
+  <section class="section related-section">
+    <div class="container">
+      <span class="eyebrow">{es ? 'ENLACES RELACIONADOS' : 'RELATED LINKS'}</span>
+      <h2>{es ? 'Servicios y Áreas Relacionadas' : 'Related Services and Service Areas'}</h2>
+      <div class="related-links">
+        {links.map((link) => <a href={link.href}>{link.label}<Icon name="arrow-right" size={18} /></a>)}
+      </div>
+    </div>
+  </section>
+)}
+
+{needsLeadForm(page) && !isThankYou && (
+  <LeadForm locale={locale} heading={formHeading} intro={formIntro ? richTextForRoute(formIntro, page.route) : undefined} />
+)}

@@ -1,0 +1,142 @@
+---
+import Icon from './Icon.astro';
+import { linkForBracketLabel, richTextForRoute, serviceLinksFor, cityLinksFor } from '@/lib/site';
+import { extractFaqs, needsLeadForm, type ContentSection, type PageData } from '@/lib/content';
+interface Props { section: ContentSection; page: PageData; locale?: 'en' | 'es'; }
+const { section, page, locale = 'en' } = Astro.props;
+const es = locale === 'es';
+const name = section.name.toLowerCase();
+const h2Line = section.lines.find((line) => line.startsWith('H2:'));
+const heading = h2Line?.slice(3).trim();
+let lines = section.lines.filter((line) => line !== h2Line);
+const numbered = lines.filter((line) => /^\d+\.\s/.test(line));
+const bullets = lines.filter((line) => /^-\s/.test(line));
+const cards = lines.filter((line) => /^Card(?:\s+\d+)?\s*[—:]/.test(line));
+const paragraphs = lines.filter((line) => !/^\d+\.\s/.test(line) && !/^-\s/.test(line) && !/^Card(?:\s+\d+)?\s*[—:]/.test(line) && !/^\[.*placeholder|^\[\d+\s/i.test(line));
+const compactSymptoms = name === 'symptoms' && lines.length === 1 && lines[0].includes(' · ') ? lines[0].split(' · ') : [];
+const faqs = name.includes('faq') ? extractFaqs({ ...page, sections: [section] }) : [];
+const isAlt = ['trust-strip', 'why-us', 'process', 'local-detail', 'service-details', 'standards', 'how-we-work'].some((term) => name.includes(term));
+const isGrid = name.includes('services-grid') || name.includes('service-areas') || name.includes('services-in-city');
+const isReviews = name.includes('reviews-placeholder') || name.includes('reviews-grid');
+const isCta = name === 'cta' || name.includes('final-cta') || name.includes('cta +');
+const isLead = name.includes('lead-form');
+const isHub = name.includes('services-hub') || name.includes('locations-hub');
+const requestHref = needsLeadForm(page) ? '#request-service' : (es ? '/es/contacto/' : '/contact/');
+const sectionAlt = page.imageAlts.find((line) => line.toLowerCase().startsWith('section:'))?.replace(/^Section:\s*/i, '');
+const showSectionImage = Boolean(sectionAlt) && (name.includes('service-details') || name.includes('local-detail'));
+const sectionEyebrow = name.includes('services-grid') || name.includes('services-in-city') ? (es ? 'SERVICIOS' : 'SERVICES') : name.includes('service-areas') ? (es ? 'ÁREAS DE SERVICIO' : 'SERVICE AREAS') : name.includes('faq') ? 'FAQ' : '';
+
+
+function parseCard(line: string): { title: string; text: string } {
+  const stripped = line.replace(/^Card(?:\s+\d+)?\s*[—:]\s*/, '');
+  const splitAt = stripped.indexOf(':');
+  return splitAt > -1 ? { title: stripped.slice(0, splitAt).trim(), text: stripped.slice(splitAt + 1).trim() } : { title: stripped, text: '' };
+}
+function stripList(line: string): string { return line.replace(/^\d+\.\s+|^-\s+/, ''); }
+function linkForCard(title: string): string {
+  return linkForBracketLabel(title.replace(/\[|\]/g, ''), page.route) || '#request-service';
+}
+const hubItems: Array<{ href: string; label: string; icon?: string }> = name.includes('services-hub') ? serviceLinksFor(page.route) : name.includes('locations-hub') ? cityLinksFor(page.route) : [];
+---
+{!isLead && !isCta && !name.includes('hero') && (
+  <section class:list={['section', isAlt && 'section-alt', isGrid && 'section-grid', isReviews && 'reviews-section', name]}>
+    <div class="container">
+      {heading && <>{sectionEyebrow && <span class="eyebrow">{sectionEyebrow}</span>}<h2>{heading}</h2></>}
+
+      {isHub && (
+        <div class="card-grid">
+          {hubItems.map((item) => (
+            <a class="service-card linked-card" href={item.href}>
+              <div class="icon-container"><Icon name={item.icon || 'map-pin'} /></div>
+              <h2>{item.label}</h2>
+              <span class="card-link">{es ? 'Ver detalles' : 'View details'} <Icon name="arrow-right" size={18} /></span>
+            </a>
+          ))}
+        </div>
+      )}
+
+      {isGrid && cards.length > 0 && (
+        <div class="card-grid">
+          {cards.map((line, index) => {
+            const card = parseCard(line);
+            const serviceItems = serviceLinksFor(page.route);
+            const icon = name.includes('service-areas') ? 'map-pin' : (serviceItems[index]?.icon || 'wrench');
+            const href = name.includes('services-grid') ? (serviceItems[index]?.href || linkForCard(card.title)) : linkForCard(card.title);
+            return (
+              <a class="service-card linked-card" href={href}>
+                <div class="icon-container"><Icon name={icon} /></div>
+                <h3>{card.title}</h3>
+                {card.text && <p set:html={richTextForRoute(card.text, page.route)} />}
+                <span class="card-link">{es ? 'Ver detalles' : 'View details'} <Icon name="arrow-right" size={18} /></span>
+              </a>
+            );
+          })}
+        </div>
+      )}
+
+      {name.includes('services-in-city') && bullets.length > 0 && (
+        <div class="service-link-grid">
+          {bullets.flatMap((line) => {
+            const segments = line.match(/\[[^\]]+\](?:\s*—\s*[^\[]+)?/g) || [line.replace(/^-/,'').trim()];
+            return segments.map((segment) => {
+              const labelMatch = segment.match(/\[([^\]]+)\]/);
+              const label = labelMatch?.[1] || segment;
+              const detail = segment.replace(/\[[^\]]+\]\s*—?\s*/, '');
+              const href = linkForBracketLabel(label, page.route) || '#request-service';
+              return <a href={href} class="service-link-card"><Icon name="wrench" /><span><strong>{label}</strong>{detail && <small>{detail}</small>}</span><Icon name="arrow-right" size={18} /></a>;
+            });
+          })}
+        </div>
+      )}
+
+      {isReviews && (
+        <div class="review-grid" aria-label={es ? 'Espacios para reseñas reales' : 'Real review placeholders'}>
+          {Array.from({ length: page.route.includes('/reviews/') || page.route.includes('/resenas/') ? 9 : 3 }).map(() => (
+            <article class="review-placeholder">
+              <div class="review-line short"></div><div class="review-line"></div><div class="review-line"></div><div class="review-line medium"></div>
+              <span>{es ? 'ESPACIO PARA RESEÑA REAL' : 'REAL REVIEW SLOT'}</span>
+            </article>
+          ))}
+        </div>
+      )}
+
+      {faqs.length > 0 && (
+        <div class="faq-list">
+          {faqs.map((faq, index) => (
+            <details class="faq-item" open={index === 0}>
+              <summary>{faq.question}<Icon name="chevron-down" /></summary>
+              <div class="faq-answer"><p set:html={richTextForRoute(faq.answer, page.route)} /></div>
+            </details>
+          ))}
+        </div>
+      )}
+
+      {!isGrid && !isReviews && faqs.length === 0 && !isHub && (
+        <div class:list={["prose", showSectionImage && "prose-with-image"]}>
+          {showSectionImage && <figure class="section-image"><img src="/images/section-placeholder.webp" width="960" height="560" alt={sectionAlt} loading="lazy" /></figure>}
+          {paragraphs.map((line) => <p set:html={richTextForRoute(line, page.route)} />)}
+          {(numbered.length > 0 || compactSymptoms.length > 0) && (
+            <ol class="feature-list">
+              {(compactSymptoms.length ? compactSymptoms : numbered.map(stripList)).map((item) => (
+                <li><span class="list-check"><Icon name="check" size={17} /></span><span set:html={richTextForRoute(item, page.route)} /></li>
+              ))}
+            </ol>
+          )}
+          {bullets.length > 0 && (
+            <ul class="detail-list">
+              {bullets.map((item) => <li set:html={richTextForRoute(stripList(item), page.route)} />)}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  </section>
+)}
+{isCta && (
+  <section class="section cta-section">
+    <div class="container cta-band">
+      <div><span class="eyebrow">{es ? 'AYUDA CUANDO LA NECESITA' : 'HELP WHEN YOU NEED IT'}</span><p set:html={richTextForRoute(lines.join(' '), page.route)} /></div>
+      <a class="button button-primary" href={requestHref}>{es ? 'Solicitar Servicio' : 'Request Service'}<Icon name="arrow-right" /></a>
+    </div>
+  </section>
+)}

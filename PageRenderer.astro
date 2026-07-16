@@ -1,0 +1,28 @@
+---
+import Icon from './Icon.astro';
+import { absoluteUrl, breadcrumbsForRoute } from '@/lib/site';
+const { route } = Astro.props;
+const crumbs = breadcrumbsForRoute(route);
+const schema = crumbs.length ? {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: crumbs.map((crumb, index) => ({
+    '@type': 'ListItem', position: index + 1, name: crumb.label, item: absoluteUrl(crumb.href)
+  }))
+} : null;
+---
+{crumbs.length > 0 && (
+  <>
+    <nav class="breadcrumbs container" aria-label="Breadcrumb">
+      <ol>
+        {crumbs.map((crumb, index) => (
+          <li>
+            {index === 0 && <Icon name="home" size={15} />}
+            {index < crumbs.length - 1 ? <a href={crumb.href}>{crumb.label}</a> : <span aria-current="page">{crumb.label}</span>}
+          </li>
+        ))}
+      </ol>
+    </nav>
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(schema)} />
+  </>
+)}

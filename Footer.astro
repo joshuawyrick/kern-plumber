@@ -1,0 +1,6 @@
+---
+import { PHONE_DISPLAY, PHONE_TEL } from '@/lib/site';
+interface Props { class?: string; label?: string; }
+const { class: className = '', label = PHONE_DISPLAY } = Astro.props;
+---
+<a href={PHONE_TEL} class={className} data-phone-link>{label}</a>

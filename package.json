@@ -1,0 +1,23 @@
+{
+  "name": "kern-plumbing-pros",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "audit": "node scripts/audit.mjs"
+  },
+  "dependencies": {
+    "@fontsource/manrope": "^5.2.6",
+    "astro": "^5.12.9",
+    "@lucide/astro": "^1.24.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "typescript": "^5.8.3",
+    "@types/node": "^24.0.0"
+  }
+}
